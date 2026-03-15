@@ -2,56 +2,88 @@
 #include <SFML/Graphics.hpp>
 #include <SFML/Window.hpp>
 
+const unsigned int WIDTH = 560;
+const unsigned int HEIGHT = 690;
+
+
+class DifficultyBtn : public sf::RectangleShape {
+private:
+	const int BTN_WIDTH = 440;
+	const int BTN_HEIGHT = 120;
+
+public:
+	sf::Text content;
+
+
+	DifficultyBtn(std::string text, sf::Font &font, float yPos)			// get an error saying, no default constructor for the sf::Text class, this is because, you have to pass in the font to the text class as soon as the constructor is called.
+		: content(font, text, 22){					// you can pass in the text string as well as the size of characters while initialising sf::Text
+
+		this->setSize(sf::Vector2f(BTN_WIDTH, BTN_HEIGHT));
+		this->setOrigin(this->getGeometricCenter());
+		this->setFillColor(sf::Color(0xFFF0F5));
+		this->setPosition({ WIDTH / 2.0f, yPos });
+
+		content.setFillColor(sf::Color::Black);
+
+		sf::FloatRect textbounds = content.getLocalBounds();
+		content.setOrigin(textbounds.size / 2.0f);
+		content.setPosition(this->getPosition());
+	}
+
+};
+
+
+
 
 int main() {
 
-	const unsigned int WIDTH = 690;
-	const unsigned int HEIGHT = 440;
-
-	sf::ConvexShape convex;
-	convex.setPointCount(6);		// to make irregular shapes, now you can set the position of individual points of the shape.
-
-	convex.setPoint(0, { 13.0f, 17.0f });		// setpoint takes in the arguments, the index (number) of the point and the coordinates to where it will be placed.
-	convex.setPoint(1, { 3.5f, 1.6f });
-	convex.setPoint(2, { 0.25f, -12.0f });
-	convex.setPoint(0, { -12.0f, -7.3f });
-	convex.setPoint(0, { -12.5f, -1.6f });
-	convex.setPoint(0, { -5.0f, 7.5f });
-	convex.setOrigin(convex.getGeometricCenter());
-	convex.setFillColor(sf::Color(0x3F00FFFF));
-	convex.setPosition({ WIDTH / 2.0f, HEIGHT / 2.0f });
-
-
-
-	sf::RenderWindow window = sf::RenderWindow(
-		sf::VideoMode({	WIDTH, HEIGHT }), "hehehe, this is the title");
+	sf::RenderWindow window = sf::RenderWindow(sf::VideoMode({ WIDTH, HEIGHT }), "minesweeper");
 	window.setFramerateLimit(69);
 
+	sf::Font font;
+	if (!font.openFromFile("PressStart2P-Regular.ttf")) {
+		std::cerr << "ERROR IN LOADING THE FONT: PressStart2P-Regular.ttf..." << std::endl;
+	}
+
+	// INSTANTIATE THE BUTTONS
+
+	DifficultyBtn hardBtn("HARD", font, 600.0f);
+	DifficultyBtn midBtn("MID", font, 450.0f);
+	DifficultyBtn easyBtn("EASY", font, 300.0f);
+
 	while (window.isOpen()) {
-		while (const std::optional event = window.pollEvent()) {
-			if (event-> is<sf::Event::Closed>()) {
+		while (std::optional event = window.pollEvent()) {
+			if (event->is<sf::Event::Closed>()) {
 				window.close();
 			}
-			else if (const auto* keyPressed = event->getIf<sf::Event::KeyPressed>()) {
-				if (keyPressed->scancode == sf::Keyboard::Scancode::Escape) {
+
+			else if (auto* keypressed = event->getIf<sf::Event::KeyPressed>()) {
+				if (keypressed->scancode == sf::Keyboard::Scancode::Escape){
 					window.close();
 				}
 			}
 		}
 
+		// render object
 
-		//render objects
+		window.clear(sf::Color::Magenta);
 
+		// draw objects
+		window.draw(easyBtn);
+		window.draw(midBtn);
+		window.draw(hardBtn);
 
-		window.clear();
-
-
-		//draw objects
-		window.draw(convex);
+		window.draw(easyBtn.content);
+		window.draw(midBtn.content);
+		window.draw(hardBtn.content);
+		
 
 
 		window.display();
+
 	}
 
 	return 0;
 }
+
+
