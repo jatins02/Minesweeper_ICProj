@@ -1,6 +1,7 @@
 #include <iostream>
 #include <SFML/Graphics.hpp>
 #include <SFML/Window.hpp>
+#include <ctime>
 
 const unsigned int WIDTH = 560;
 const unsigned int HEIGHT = 690;
@@ -46,9 +47,19 @@ public:
 
 void setting_btn_clicked(int x, int y, DifficultyBtn &easy, DifficultyBtn &mid, DifficultyBtn &hard, difficulties &difficulty_setting);
 
-void main_game(sf::RenderWindow& window, sf::Font& font, difficulties difficulty_setting);
+void main_game(sf::RenderWindow& window, sf::Font& font, difficulties difficulty_setting,
+				int box_size[], int grid_size[], int num_bombs[]);
+
+int* get_bomb_indices(int num_of_bombs, int grid_size);
+int check_if_present(int* arr, int num, int length);
+
 
 int main() {
+
+	int box_size[3] = {65, 52, 42};
+	int grid_size[3] = {8, 10, 12};
+	int num_bombs[3] = {6, 11, 15};
+
 
 	sf::RenderWindow window = sf::RenderWindow(sf::VideoMode({ WIDTH, HEIGHT }), "minesweeper");
 	window.setFramerateLimit(69);
@@ -93,7 +104,13 @@ int main() {
 
 					if (difficulty_setting == none) {
 						setting_btn_clicked(mouse_x, mouse_y, easyBtn, midBtn, hardBtn, difficulty_setting);
-						std::cout << "current difficulty setting set to " << difficulty_setting << std::endl;
+
+						int* bomb_indices = (int*)malloc(num_bombs[difficulty_setting] * sizeof(int));
+						bomb_indices = get_bomb_indices(num_bombs[difficulty_setting], grid_size[difficulty_setting]);
+						
+						//for (int i = 0; i < num_bombs[difficulty_setting]; i++) {
+						//	std::cout << *(bomb_indices + i) << " ";
+						//}
 					}
 				}
 			}
@@ -119,7 +136,7 @@ int main() {
 
 		else {
 
-			main_game(window, font, difficulty_setting);
+			main_game(window, font, difficulty_setting, box_size, grid_size, num_bombs);
 		}
 		
 		window.display();
@@ -149,21 +166,77 @@ void setting_btn_clicked(int x, int y, DifficultyBtn &easy, DifficultyBtn &mid, 
 }
 
 
-void main_game(sf::RenderWindow& window, sf::Font& font, difficulties difficulty_setting) {
-	int box_size[3] = { 65, 52, 42 };
-	int grid_size[3] = { 8, 10, 12 };
-	int num_bombs[3] = { 6, 11, 15 };
+void main_game(sf::RenderWindow& window, sf::Font& font, difficulties difficulty_setting,
+				int box_size[], int grid_size[], int num_bombs[]) {				// pass by value will also work for the three matrices
 	int padding[3] = { 3, 3, 3 };
 	int offset_x[3] = {7, 4, 9};
 	int offset_y[3] = {126, 120, 136};
 
 	for (int i = 1; i <= grid_size[difficulty_setting]; i++) {
 		for (int j = 1; j <= grid_size[difficulty_setting]; j++) {
+
 			sf::RectangleShape rect(sf::Vector2f(box_size[difficulty_setting], box_size[difficulty_setting]));
+
 			rect.setPosition({ (float)box_size[difficulty_setting] * (i - 1) + padding[difficulty_setting] * i + offset_x[difficulty_setting],
 							   (float)box_size[difficulty_setting] * (j - 1) + padding[difficulty_setting] * j + offset_y[difficulty_setting]});
+			
 			window.draw(rect);
 		}
 	}
 }
+
+
+int* get_bomb_indices(int num_of_bombs, int grid_size) {
+	std::srand(std::time(nullptr));
+
+	int* arr = (int*)malloc(num_of_bombs * sizeof(int));
+
+	for (int i = 0; i < num_of_bombs; i++) {
+
+		int random = std::rand() % (grid_size * grid_size);
+		int is_present = check_if_present(arr, random, i + 1);
+
+		while (is_present) {
+			random = std::rand() % (grid_size * grid_size);
+			is_present = check_if_present(arr, random, i + 1);
+		}
+
+		arr[i] = random;
+	}
+
+	return arr;
+}
+
+int check_if_present(int* arr, int num, int length) {
+	for (int i = 0; i < length; i++) {
+		if (arr[i] == num) {
+			return 1;
+		}
+	}
+	return 0;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
