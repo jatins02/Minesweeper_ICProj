@@ -48,10 +48,12 @@ public:
 void setting_btn_clicked(int x, int y, DifficultyBtn &easy, DifficultyBtn &mid, DifficultyBtn &hard, difficulties &difficulty_setting);
 
 void main_game(sf::RenderWindow& window, sf::Font& font, difficulties difficulty_setting,
-				int box_size[], int grid_size[], int num_bombs[]);
+				int box_size[], int grid_size[], int num_bombs[], int bomb_indices[]);
 
 int* get_bomb_indices(int num_of_bombs, int grid_size);
 int check_if_present(int* arr, int num, int length);
+int get_box_number(int bomb_indices[], int box_number, int rows, int num_bomb);
+int get_value(int bomb_indices[], int neighbours[], int num_bombs, int num_of_neighbours);
 
 
 int main() {
@@ -59,6 +61,7 @@ int main() {
 	int box_size[3] = {65, 52, 42};
 	int grid_size[3] = {8, 10, 12};
 	int num_bombs[3] = {6, 11, 15};
+	int* bomb_indices = nullptr;
 
 
 	sf::RenderWindow window = sf::RenderWindow(sf::VideoMode({ WIDTH, HEIGHT }), "minesweeper");
@@ -105,7 +108,7 @@ int main() {
 					if (difficulty_setting == none) {
 						setting_btn_clicked(mouse_x, mouse_y, easyBtn, midBtn, hardBtn, difficulty_setting);
 
-						int* bomb_indices = (int*)malloc(num_bombs[difficulty_setting] * sizeof(int));
+						bomb_indices = (int*)malloc(num_bombs[difficulty_setting] * sizeof(int));
 						bomb_indices = get_bomb_indices(num_bombs[difficulty_setting], grid_size[difficulty_setting]);
 						
 						//for (int i = 0; i < num_bombs[difficulty_setting]; i++) {
@@ -136,7 +139,7 @@ int main() {
 
 		else {
 
-			main_game(window, font, difficulty_setting, box_size, grid_size, num_bombs);
+			main_game(window, font, difficulty_setting, box_size, grid_size, num_bombs, bomb_indices);
 		}
 		
 		window.display();
@@ -167,22 +170,110 @@ void setting_btn_clicked(int x, int y, DifficultyBtn &easy, DifficultyBtn &mid, 
 
 
 void main_game(sf::RenderWindow& window, sf::Font& font, difficulties difficulty_setting,
-				int box_size[], int grid_size[], int num_bombs[]) {				// pass by value will also work for the three matrices
+				int box_size[], int grid_size[], int num_bombs[], int bomb_indices[]) {				// pass by value will also work for the three matrices
 	int padding[3] = { 3, 3, 3 };
 	int offset_x[3] = {7, 4, 9};
 	int offset_y[3] = {126, 120, 136};
 
+	int* box_values = (int*)malloc((grid_size[difficulty_setting] * grid_size[difficulty_setting]) * sizeof(int));
+
 	for (int i = 1; i <= grid_size[difficulty_setting]; i++) {
 		for (int j = 1; j <= grid_size[difficulty_setting]; j++) {
 
+			int box_number = (i-1)*grid_size[difficulty_setting] + j;
+			if (box_values != nullptr) {
+				box_values[box_number - 1] = get_box_number(bomb_indices, box_number, grid_size[difficulty_setting], num_bombs[difficulty_setting]);
+			}
+			else {
+				std::cout << "Error in inserting values to boxes..." << std::endl;
+			}
 			sf::RectangleShape rect(sf::Vector2f(box_size[difficulty_setting], box_size[difficulty_setting]));
 
 			rect.setPosition({ (float)box_size[difficulty_setting] * (i - 1) + padding[difficulty_setting] * i + offset_x[difficulty_setting],
 							   (float)box_size[difficulty_setting] * (j - 1) + padding[difficulty_setting] * j + offset_y[difficulty_setting]});
 			
 			window.draw(rect);
+			//std::cout << box_number << " : " << box_values[box_number - 1] << std::endl;
 		}
 	}
+}
+
+
+int get_value(int bomb_indices[], int neighbours[], int num_bomb, int num_of_neighbours) {
+	int value = 0;
+	for (int i = 0; i < num_of_neighbours; i++) {
+		if (check_if_present(bomb_indices, neighbours[i], num_bomb)) {
+			value++;
+		}
+	}
+	return value;
+}
+
+int get_box_number(int bomb_indices[], int box_number, int rows, int num_bomb) {
+	int value = 0;
+
+	if (check_if_present(bomb_indices, box_number, num_bomb)) {
+		value = -1;
+	}
+
+	else {
+
+		if (box_number % rows == 0) {
+			// box is at the last of the row
+			if (box_number == rows) {
+				// top right box
+				int neighbours[3] = { box_number - 1, box_number + rows, box_number + rows - 1 };
+				value = get_value(bomb_indices, neighbours, num_bomb, 3);
+			}
+			else if (box_number == rows * rows) {
+				// bottom right box
+				int neighbours[3] = { box_number - 1, box_number - rows, box_number - rows - 1 };
+				value = get_value(bomb_indices, neighbours, num_bomb, 3);
+			}
+			else {
+				// remaining boxes in last column
+				int neighbours[5] = { box_number - 1, box_number - rows, box_number - rows - 1, box_number + rows, box_number + rows - 1 };
+				value = get_value(bomb_indices, neighbours, num_bomb, 5);
+			}
+		}
+
+		else if (box_number % rows == 1) {
+			// box is at the start of the row
+			if (box_number == 1) {
+				// top left box
+				int neighbours[3] = { box_number + 1, box_number + rows, box_number + rows + 1 };
+				value = get_value(bomb_indices, neighbours, num_bomb, 3);
+			}
+			else if (box_number == rows * (rows - 1) + 1) {
+				// bottom left box
+				int neighbours[3] = { box_number + 1, box_number - rows, box_number - rows + 1 };
+				value = get_value(bomb_indices, neighbours, num_bomb, 3);
+			}
+			else {
+				// remaining boxes in first column
+				int neighbours[5] = { box_number + 1, box_number - rows, box_number - rows + 1, box_number + rows, box_number + rows + 1 };
+				value = get_value(bomb_indices, neighbours, num_bomb, 5);
+			}
+		}
+
+		else if (box_number >= 2 && box_number <= rows - 1) {
+			int neighbours[5] = { box_number - 1, box_number + 1, box_number + rows - 1, box_number + rows, box_number + rows + 1 };
+			value = get_value(bomb_indices, neighbours, num_bomb, 5);
+		}
+		else if (box_number >= 2 + (rows * (rows - 1)) && box_number <= rows * rows - 1) {
+			int neighbours[5] = { box_number - 1, box_number + 1, box_number - rows - 1, box_number - rows, box_number - rows + 1 };
+			value = get_value(bomb_indices, neighbours, num_bomb, 5);
+		}
+		else {
+			// box is in some of the middle columns, account for the top and bottom rows, else good
+			int neighbours[8] = { box_number - rows - 1, box_number - rows, box_number - rows - 1,
+								  box_number - 1,                           box_number + 1,
+								  box_number + rows - 1, box_number + rows, box_number + rows + 1 };
+			value = get_value(bomb_indices, neighbours, num_bomb, 8);
+		}
+	}
+
+	return value;
 }
 
 
@@ -203,6 +294,10 @@ int* get_bomb_indices(int num_of_bombs, int grid_size) {
 
 		arr[i] = random;
 	}
+
+	//for (int i = 0; i < num_of_bombs; i++) {
+	//	std::cout << arr[i] << std::endl;
+	//}
 
 	return arr;
 }
