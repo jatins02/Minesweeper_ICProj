@@ -47,8 +47,8 @@ public:
 
 void setting_btn_clicked(int x, int y, DifficultyBtn &easy, DifficultyBtn &mid, DifficultyBtn &hard, difficulties &difficulty_setting);
 
-void main_game(sf::RenderWindow& window, sf::Font& font, difficulties difficulty_setting,
-				int box_size[], int grid_size[], int num_bombs[], int bomb_indices[]);
+void draw_grid(sf::RenderWindow& window, sf::Font& font, difficulties difficulty_setting,
+				int box_size[], int grid_size[], int num_bombs[], int bomb_indices[], int mouse_x, int mouse_y);
 
 int* get_bomb_indices(int num_of_bombs, int grid_size);
 int check_if_present(int* arr, int num, int length);
@@ -61,8 +61,14 @@ int main() {
 	int box_size[3] = {65, 52, 42};
 	int grid_size[3] = {8, 10, 12};
 	int num_bombs[3] = {6, 11, 15};
+	int padding[3] = { 3, 3, 3 };
+	int offset_x[3] = { 7, 4, 9 };
+	int offset_y[3] = { 126, 120, 136 };
 	int* bomb_indices = nullptr;
+	int mouse_x = 0;
+	int mouse_y = 0;
 
+	int* revealed = nullptr;
 
 	sf::RenderWindow window = sf::RenderWindow(sf::VideoMode({ WIDTH, HEIGHT }), "minesweeper");
 	window.setFramerateLimit(69);
@@ -95,29 +101,55 @@ int main() {
 			}
 
 			else if (auto* keypressed = event->getIf<sf::Event::KeyPressed>()) {
-				if (keypressed->scancode == sf::Keyboard::Scancode::Escape){
+				if (keypressed->scancode == sf::Keyboard::Scancode::Escape) {
 					window.close();
 				}
 			}
 
 			else if (const auto* mouseBtnPressed = event->getIf<sf::Event::MouseButtonPressed>()) {
 				if (mouseBtnPressed->button == sf::Mouse::Button::Left) {
-					int mouse_x = mouseBtnPressed->position.x;
-					int mouse_y = mouseBtnPressed->position.y;
+					mouse_x = mouseBtnPressed->position.x;
+					mouse_y = mouseBtnPressed->position.y;
 
 					if (difficulty_setting == none) {
 						setting_btn_clicked(mouse_x, mouse_y, easyBtn, midBtn, hardBtn, difficulty_setting);
 
-						bomb_indices = (int*)malloc(num_bombs[difficulty_setting] * sizeof(int));
-						bomb_indices = get_bomb_indices(num_bombs[difficulty_setting], grid_size[difficulty_setting]);
+						if (difficulty_setting != none) {
+							int total_tiles = grid_size[difficulty_setting] * grid_size[difficulty_setting];
+							bomb_indices = get_bomb_indices(num_bombs[difficulty_setting], grid_size[difficulty_setting]);
+							
+							//int total_tiles = grid_size[difficulty_setting] * grid_size[difficulty_setting];
+							revealed = new int[total_tiles]();
+							// getting box values in the old way that i have been doing...
+						}
 						
-						//for (int i = 0; i < num_bombs[difficulty_setting]; i++) {
-						//	std::cout << *(bomb_indices + i) << " ";
-						//}
+						
+					}
+					else {
+						//handle_grid_click(mouse_x, mouse_y, difficulty_setting, box_size, grid_size);
+
+
+						int p = padding[0];
+						int ox = offset_x[difficulty_setting];
+						int oy = offset_y[difficulty_setting];
+						int bs = box_size[difficulty_setting];
+
+						int col = ((mouse_x - ox) / (bs + p)) + 1;
+						int row = ((mouse_y - oy) / (bs + p)) + 1;
+
+						if (col >= 1 && col <= grid_size[difficulty_setting] && row >= 1 && row <= grid_size[difficulty_setting]) {
+							revealed[(row-1) * grid_size[difficulty_setting] + col] = 1;
+							std::cout << "box number, " << (row-1) * grid_size[difficulty_setting] + col << " was clicked" << std::endl;
+
+						}
+
+						mouse_x = -1;
+						mouse_y = -1;
 					}
 				}
 			}
 		}
+	
 
 		// render object
 
@@ -138,8 +170,7 @@ int main() {
 		}
 
 		else {
-
-			main_game(window, font, difficulty_setting, box_size, grid_size, num_bombs, bomb_indices);
+			draw_grid(window, font, difficulty_setting, box_size, grid_size, num_bombs, bomb_indices, mouse_x, mouse_y);
 		}
 		
 		window.display();
@@ -169,18 +200,20 @@ void setting_btn_clicked(int x, int y, DifficultyBtn &easy, DifficultyBtn &mid, 
 }
 
 
-void main_game(sf::RenderWindow& window, sf::Font& font, difficulties difficulty_setting,
-				int box_size[], int grid_size[], int num_bombs[], int bomb_indices[]) {				// pass by value will also work for the three matrices
+void draw_grid(sf::RenderWindow& window, sf::Font& font, difficulties difficulty_setting,
+	int box_size[], int grid_size[], int num_bombs[], int bomb_indices[], int mouse_x = -1, int mouse_y = -1) {				// pass by value will also work for the three matrices
+	
+	
 	int padding[3] = { 3, 3, 3 };
-	int offset_x[3] = {7, 4, 9};
-	int offset_y[3] = {126, 120, 136};
+	int offset_x[3] = { 7, 4, 9 };
+	int offset_y[3] = { 126, 120, 136 };
 
 	int* box_values = (int*)malloc((grid_size[difficulty_setting] * grid_size[difficulty_setting]) * sizeof(int));
 
 	for (int i = 1; i <= grid_size[difficulty_setting]; i++) {
 		for (int j = 1; j <= grid_size[difficulty_setting]; j++) {
 
-			int box_number = (i-1)*grid_size[difficulty_setting] + j;
+			int box_number = (i - 1) * grid_size[difficulty_setting] + j;
 			if (box_values != nullptr) {
 				box_values[box_number - 1] = get_box_number(bomb_indices, box_number, grid_size[difficulty_setting], num_bombs[difficulty_setting]);
 			}
@@ -190,14 +223,16 @@ void main_game(sf::RenderWindow& window, sf::Font& font, difficulties difficulty
 			sf::RectangleShape rect(sf::Vector2f(box_size[difficulty_setting], box_size[difficulty_setting]));
 
 			rect.setPosition({ (float)box_size[difficulty_setting] * (i - 1) + padding[difficulty_setting] * i + offset_x[difficulty_setting],
-							   (float)box_size[difficulty_setting] * (j - 1) + padding[difficulty_setting] * j + offset_y[difficulty_setting]});
-			
+							   (float)box_size[difficulty_setting] * (j - 1) + padding[difficulty_setting] * j + offset_y[difficulty_setting] });
+
 			window.draw(rect);
-			//std::cout << box_number << " : " << box_values[box_number - 1] << std::endl;
+
+
+			// we could send in the mouse_x and mouse_y to this function itself and handle it within this function, within this loop.
+			
 		}
 	}
 }
-
 
 int get_value(int bomb_indices[], int neighbours[], int num_bomb, int num_of_neighbours) {
 	int value = 0;
@@ -294,11 +329,6 @@ int* get_bomb_indices(int num_of_bombs, int grid_size) {
 
 		arr[i] = random;
 	}
-
-	//for (int i = 0; i < num_of_bombs; i++) {
-	//	std::cout << arr[i] << std::endl;
-	//}
-
 	return arr;
 }
 
