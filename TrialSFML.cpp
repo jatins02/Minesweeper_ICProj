@@ -157,7 +157,7 @@ int main() {
 
 						if (col >= 1 && col <= grid_size[difficulty_setting] && row >= 1 && row <= grid_size[difficulty_setting]) {
 							button_clicked = (row - 1) * grid_size[difficulty_setting] + col;
-							revealed[button_clicked - 1] = 1;
+							//revealed[button_clicked - 1] = 1;
 							//std::cout << "box number, " << button_clicked << " was clicked" << std::endl;
 						}
 
@@ -210,50 +210,114 @@ int main() {
 	return 0;
 }
 
-
+/*
 void handle_grid_click(int button_clicked, int* revealed, int* box_values, int grid_size) {
 	// individual button clicks reach here, now you have the revealed arr
 
-	
 
-	if (box_values[button_clicked - 1] == -1) {
-		revealed[button_clicked - 1] = 1;
-		std::cout << "you clicked on a bomb, GAME OVER..." << std::endl;
+	//for (int i = 0; i < grid_size; i++) {
+	//	for (int j = 0; j < grid_size; j++) {
+	//		std::cout << revealed[grid_size * i + j] << " ";
+	//	}
+	//	std::cout << std::endl;
+	//}
+
+	std::cout << "box number: " << button_clicked << " box value: " << box_values[button_clicked - 1] << std::endl;
+
+	if (revealed[button_clicked - 1] == 1) {
+		std::cout << "box already clicked" << std::endl;
 		return;
 	}
 
-	if (revealed[button_clicked - 1] == 1) return;		// latest change here
-
-	else if (box_values[button_clicked - 1] != 0) {
-		revealed[button_clicked - 1] = 1;
-		return;
-	}
-
-	else if (box_values[button_clicked - 1] == 0) {
-		revealed[button_clicked - 1] = 1;
-
-		// when zero is clicked, get its neighbours, then for each of the neighbours, check if they are a number, if they are, simply reveal them
-		// if they are another zero, then call recursion, a zero HAS TO HAVE numbers in its surroundings, it CANNOT have a bomb in its surroudings.
-		int neighbour_counter = 0;
-		int* neighbours = get_neighbours(button_clicked, grid_size);
-		int curr_box_num = neighbours[neighbour_counter];
-		
-		while (curr_box_num != -1) {
-			revealed[curr_box_num - 1] = 1;
-
-			if (box_values[curr_box_num - 1] == 0) {
-				handle_grid_click(curr_box_num, revealed, box_values, grid_size);
-			}
-
-			neighbour_counter++;
-		}
-		return;
-	}
 
 	else {
-		std::cout << "handle_grid_click encountered an unaccounted for case..." << std::endl;
+		if (box_values[button_clicked - 1] == -1) {
+			revealed[button_clicked - 1] = 1;
+			std::cout << "you clicked on a bomb, GAME OVER..." << std::endl;
+			return;
+		}
+
+		else if (box_values[button_clicked - 1] != 0) {
+			revealed[button_clicked - 1] = 1;
+			return;
+		}
+
+		else if (box_values[button_clicked - 1] == 0) {
+			revealed[button_clicked - 1] = 1;
+
+			// when zero is clicked, get its neighbours, then for each of the neighbours, check if they are a number, if they are, simply reveal them
+			// if they are another zero, then call recursion, a zero HAS TO HAVE numbers in its surroundings, it CANNOT have a bomb in its surroudings.
+			int neighbour_counter = 0;
+			int* neighbours = get_neighbours(button_clicked, grid_size);
+			int curr_box_num = neighbours[neighbour_counter];
+
+			while (curr_box_num != -1) {
+
+				handle_grid_click(curr_box_num, revealed, box_values, grid_size);
+
+				//revealed[curr_box_num - 1] = 1;
+				//if (box_values[curr_box_num - 1] == 0) {
+				//	handle_grid_click(curr_box_num, revealed, box_values, grid_size);
+				//}
+				neighbour_counter++;
+
+				//return;
+			}
+			//return;
+		}
+
+		else {
+			std::cout << "handle_grid_click encountered an unaccounted for case..." << std::endl;
+		}
 	}
 
+	
+
+}
+*/
+
+
+void handle_grid_click(int button_clicked, int* revealed, int* box_values, int grid_size) {
+
+	std::cout << "box number: " << button_clicked << " box value: " << box_values[button_clicked - 1] << std::endl;
+
+
+	if (button_clicked > (grid_size * grid_size) || button_clicked < 1) {
+		// tile outside of the boundary is clicked
+		return;
+	}
+
+	if (box_values[button_clicked - 1] == -1 || revealed[button_clicked - 1] == 1) {
+		return;			// for now account for both the cases, when tile opened or is a bomb in the same case
+	}
+
+	if (box_values[button_clicked - 1] >= 1 && box_values[button_clicked - 1] <= 8) {
+		// tile is a valid number, reveal it
+		revealed[button_clicked - 1] = 1;
+	}
+
+	if (box_values[button_clicked - 1] == 0){
+		revealed[button_clicked - 1] = 1;
+
+		int neighbour_counter = 0;
+		int* neighbours = get_neighbours(button_clicked, grid_size);
+		//int curr_box_num = neighbours[neighbour_counter];
+
+		while (neighbours[neighbour_counter] != -1) {
+
+			handle_grid_click(neighbours[neighbour_counter], revealed, box_values, grid_size);
+
+			//revealed[curr_box_num - 1] = 1;
+			//if (box_values[curr_box_num - 1] == 0) {
+			//	handle_grid_click(curr_box_num, revealed, box_values, grid_size);
+			//}
+			neighbour_counter++;
+
+			//return;
+		}
+		//return;
+	}
+	
 }
 
 int* get_neighbours(int box_number, int grid_size) {
@@ -404,8 +468,7 @@ void draw_grid(sf::RenderWindow& window, sf::Font& font, difficulties difficulty
 
 			if (revealed[box_number - 1]) {
 				rect.setFillColor(sf::Color::Black);
-				std::cout << "box number: " << box_number << " box value: " << box_values[box_number - 1] << std::endl;
-				
+				//std::cout << "box number: " << box_number << " box value: " << box_values[box_number - 1] << std::endl;
 			}
 			
 			window.draw(rect);
