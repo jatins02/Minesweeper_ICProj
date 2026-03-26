@@ -2,6 +2,7 @@
 #include <SFML/Graphics.hpp>
 #include <SFML/Window.hpp>
 #include <ctime>
+#include <string>  // to utilise the std::to_sting function
 
 const unsigned int WIDTH = 560;
 const unsigned int HEIGHT = 690;
@@ -59,7 +60,7 @@ int get_value(int bomb_indices[], int neighbours[], int num_bombs, int num_of_ne
 int* get_neighbours(int box_number, int grid_size);
 
 void handle_grid_click(int button_clicked, int *revealed, int* box_values, int grid_size);
-
+void revealtile(sf::Font& font, sf::RectangleShape& tile, std::string& text, sf::RenderWindow &window);
 
 
 // MAIN AND GAME FUNCTIONS
@@ -190,7 +191,6 @@ int main() {
 		}
 		
 		window.display();
-
 	}
 
 	return 0;
@@ -354,6 +354,7 @@ void draw_grid(sf::RenderWindow& window, sf::Font& font, difficulties difficulty
 	int padding[3] = { 3, 3, 3 };
 	int offset_x[3] = { 7, 4, 9 };
 	int offset_y[3] = { 126, 120, 136 };
+	sf::Text content(font, "", 2);
 
 	for (int i = 1; i <= grid_size[difficulty_setting]; i++) {
 		for (int j = 1; j <= grid_size[difficulty_setting]; j++) {
@@ -366,14 +367,47 @@ void draw_grid(sf::RenderWindow& window, sf::Font& font, difficulties difficulty
 							   (float)box_size[difficulty_setting] * (i - 1) + padding[difficulty_setting] * i + offset_y[difficulty_setting] });
 
 			if (revealed[box_number - 1]) {
-				rect.setFillColor(sf::Color::Black);
+				// if the tile is revealed, then draw the rect before the number
+				std::string text = std::to_string(box_values[box_number - 1]);
+				revealtile(font, rect, text, window);
 			}
-			
-			window.draw(rect);
+			else {
+				window.draw(rect);
+			}
 		}
 	}
 }
 
+
+
+// important logic:
+// in the draw_grid loop, if the tile is revealed, we get into the revealtile function, wherein, we first draw the tile, then draw the number on top of it, so that it is visible.
+// else if the tile is not revealed, we simply just draw the tile, without making any changes onto it.
+
+void revealtile(sf::Font &font, sf::RectangleShape &tile, std::string &text, sf::RenderWindow &window) {
+
+	tile.setFillColor(sf::Color::Black);
+	window.draw(tile);
+
+	if (text == "0") {
+		return;
+	}
+
+	sf::Text content(font, text, 30);
+
+	content.setFont(font);
+	content.setString(text);
+	content.setCharacterSize(22);
+	content.setFillColor(sf::Color::White);
+
+	sf::FloatRect textbounds = content.getLocalBounds();
+	content.setOrigin(textbounds.size / 2.0f);
+	sf::Vector2f posn = tile.getPosition();
+
+	content.setPosition({ posn.x + 22.0f, posn.y + 22.0f });
+
+	window.draw(content);
+}
 
 // MISCELLANEOUS FUNCTION, (HELPERS)
 
@@ -484,25 +518,6 @@ int check_if_present(int* arr, int num, int length) {
 	}
 	return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
