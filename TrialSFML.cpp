@@ -55,12 +55,13 @@ void draw_grid(sf::RenderWindow& window, sf::Font& font, difficulties difficulty
 
 int* get_bomb_indices(int num_of_bombs, int grid_size);
 int check_if_present(int* arr, int num, int length);
-int get_box_number(int bomb_indices[], int box_number, int rows, int num_bomb);
+int get_box_value(int bomb_indices[], int box_number, int rows, int num_bomb, int grid_size);
 int get_value(int bomb_indices[], int neighbours[], int num_bombs, int num_of_neighbours);
 int* get_neighbours(int box_number, int grid_size);
 
 void handle_grid_click(int button_clicked, int *revealed, int* box_values, int grid_size);
 void revealtile(sf::Font& font, sf::RectangleShape& tile, std::string& text, sf::RenderWindow &window);
+void handle_bomb_click(sf::RenderWindow &window, sf::Font &font, int &running);
 
 
 // MAIN AND GAME FUNCTIONS
@@ -79,6 +80,7 @@ int main() {
 	int* box_values = nullptr;
 	int* revealed = nullptr;
 
+	int running = 1;
 
 	// SFML LIBRARY
 	sf::RenderWindow window = sf::RenderWindow(sf::VideoMode({ WIDTH, HEIGHT }), "minesweeper");
@@ -134,7 +136,7 @@ int main() {
 								for (int j = 1; j <= grid_size[difficulty_setting]; j++) {
 									int box_number = (i - 1) * grid_size[difficulty_setting] + j;
 									if (box_values != nullptr) {
-										box_values[box_number - 1] = get_box_number(bomb_indices, box_number, grid_size[difficulty_setting], num_bombs[difficulty_setting]);
+										box_values[box_number - 1] = get_box_value(bomb_indices, box_number, grid_size[difficulty_setting], num_bombs[difficulty_setting], grid_size[difficulty_setting]);
 									}
 									else {
 										std::cout << "Error in inserting values to boxes..." << std::endl;
@@ -154,13 +156,21 @@ int main() {
 						int col = ((mouse_x - ox) / (bs + p)) + 1;
 						int row = ((mouse_y - oy) / (bs + p)) + 1;
 
+
+						// if the click registered is inside the grid, get the box number
 						if (col >= 1 && col <= grid_size[difficulty_setting] && row >= 1 && row <= grid_size[difficulty_setting]) {
 							button_clicked = (row - 1) * grid_size[difficulty_setting] + col;
 						}
 
-						handle_grid_click(button_clicked, revealed, box_values, grid_size[difficulty_setting]);
-
-
+						// check if bomb at that box number
+						if (*(box_values + button_clicked - 1) == -1) {
+							std::cout << "bomb was clicked..." << std::endl;
+							handle_bomb_click(window, font, running);
+						}
+						else if (running) {
+							handle_grid_click(button_clicked, revealed, box_values, grid_size[difficulty_setting]);
+						}
+						
 						// to reset the mouse clicked coordinates
 						mouse_x = -1;
 						mouse_y = -1;
@@ -172,24 +182,30 @@ int main() {
 
 		// render object
 		window.clear(sf::Color::Magenta);
-
-		// draw objects
-		if (difficulty_setting == none) {			// when difficulty not set, draw difficulty setting buttons
-			window.draw(easyBtn);
-			window.draw(midBtn);
-			window.draw(hardBtn);
-
-			window.draw(easyBtn.content);
-			window.draw(midBtn.content);
-			window.draw(hardBtn.content);
-
-			window.draw(heading);
-		}
-
-		else {				// when difficulty is set, draw the game grid
-			draw_grid(window, font, difficulty_setting, box_size, grid_size, num_bombs, bomb_indices, button_clicked, revealed, box_values);
-		}
 		
+		// draw objects
+		if (running) {
+			if (difficulty_setting == none) {			// when difficulty not set, draw difficulty setting buttons
+				window.draw(easyBtn);
+				window.draw(midBtn);
+				window.draw(hardBtn);
+
+				window.draw(easyBtn.content);
+				window.draw(midBtn.content);
+				window.draw(hardBtn.content);
+
+				window.draw(heading);
+			}
+
+			else {				// when difficulty is set, draw the game grid
+				draw_grid(window, font, difficulty_setting, box_size, grid_size, num_bombs, bomb_indices, button_clicked, revealed, box_values);
+			}
+		}
+		else {
+			draw_grid(window, font, difficulty_setting, box_size, grid_size, num_bombs, bomb_indices, button_clicked, revealed, box_values);
+			handle_bomb_click(window, font, running);
+		}
+			
 		window.display();
 	}
 
@@ -205,8 +221,10 @@ void handle_grid_click(int button_clicked, int* revealed, int* box_values, int g
 		// tile outside of the boundary is clicked
 		return;
 	}
-
-	if (box_values[button_clicked - 1] == -1 || revealed[button_clicked - 1] == 1) {
+	if (revealed[button_clicked - 1] == 1) {
+		return;
+	}
+	if (box_values[button_clicked - 1] == -1 ) {
 		// for now account for both the cases, when tile opened or is a bomb in the same case
 		return;			
 	}
@@ -225,13 +243,14 @@ void handle_grid_click(int button_clicked, int* revealed, int* box_values, int g
 		while (neighbours[neighbour_counter] != -1) {
 
 			handle_grid_click(neighbours[neighbour_counter], revealed, box_values, grid_size);
-
 			neighbour_counter++;
 		}
 	}
 }
 
 int* get_neighbours(int box_number, int grid_size) {
+	// this function returning a local array, this is dangerous, create an array, just before the function call then get inside this function
+	// for now it works
 
 	if (box_number == 1) { // top left box
 		int neighbours[4] = { 0 };
@@ -367,7 +386,7 @@ void draw_grid(sf::RenderWindow& window, sf::Font& font, difficulties difficulty
 							   (float)box_size[difficulty_setting] * (i - 1) + padding[difficulty_setting] * i + offset_y[difficulty_setting] });
 
 			if (revealed[box_number - 1]) {
-				// if the tile is revealed, then draw the rect before the number
+				// if the tile is revealed, draw the rect before the number
 				std::string text = std::to_string(box_values[box_number - 1]);
 				revealtile(font, rect, text, window);
 			}
@@ -378,6 +397,28 @@ void draw_grid(sf::RenderWindow& window, sf::Font& font, difficulties difficulty
 	}
 }
 
+
+void handle_bomb_click(sf::RenderWindow &window, sf::Font &font, int &running) {
+	running = 0;
+	
+	sf::RectangleShape end_label;
+	end_label.setOrigin(end_label.getGeometricCenter());
+	end_label.setPosition({ WIDTH / 2.0f, HEIGHT / 2.0f });
+	end_label.setFillColor(sf::Color::Blue);
+
+	sf::Text mssg(font, "GAME OVER...", 44);
+
+	mssg.setFillColor(sf::Color::Green);
+
+	sf::FloatRect textbounds = mssg.getLocalBounds();
+	mssg.setOrigin(textbounds.size / 2.0f);
+	sf::Vector2f posn = end_label.getPosition();
+
+	mssg.setPosition({ posn.x , posn.y });
+
+	window.draw(end_label);		// not working rn
+	window.draw(mssg);
+}
 
 
 // important logic:
@@ -393,11 +434,8 @@ void revealtile(sf::Font &font, sf::RectangleShape &tile, std::string &text, sf:
 		return;
 	}
 
-	sf::Text content(font, text, 30);
+	sf::Text content(font, text, 22);
 
-	content.setFont(font);
-	content.setString(text);
-	content.setCharacterSize(22);
 	content.setFillColor(sf::Color::White);
 
 	sf::FloatRect textbounds = content.getLocalBounds();
@@ -422,7 +460,7 @@ int get_value(int bomb_indices[], int neighbours[], int num_bomb, int num_of_nei
 }
 
 
-int get_box_number(int bomb_indices[], int box_number, int rows, int num_bomb) {
+int get_box_value(int bomb_indices[], int box_number, int rows, int num_bomb, int grid_size) {
 	int value = 0;
 
 	if (check_if_present(bomb_indices, box_number, num_bomb)) {
@@ -431,57 +469,80 @@ int get_box_number(int bomb_indices[], int box_number, int rows, int num_bomb) {
 
 	else {
 
-		if (box_number % rows == 0) {
-			// box is at the last of the row
-			if (box_number == rows) {
-				// top right box
-				int neighbours[3] = { box_number - 1, box_number + rows, box_number + rows - 1 };
-				value = get_value(bomb_indices, neighbours, num_bomb, 3);
-			}
-			else if (box_number == rows * rows) {
-				// bottom right box
-				int neighbours[3] = { box_number - 1, box_number - rows, box_number - rows - 1 };
-				value = get_value(bomb_indices, neighbours, num_bomb, 3);
-			}
-			else {
-				// remaining boxes in last column
-				int neighbours[5] = { box_number - 1, box_number - rows, box_number - rows - 1, box_number + rows, box_number + rows - 1 };
-				value = get_value(bomb_indices, neighbours, num_bomb, 5);
-			}
+		if (box_number == 1) { // top left box
+			int neighbours[3] = { 0 };
+			neighbours[0] = box_number + 1;
+			neighbours[1] = box_number + grid_size;
+			neighbours[2] = box_number + grid_size + 1;
+			value = get_value(bomb_indices, neighbours, num_bomb, 3);
 		}
-
-		else if (box_number % rows == 1) {
-			// box is at the start of the row
-			if (box_number == 1) {
-				// top left box
-				int neighbours[3] = { box_number + 1, box_number + rows, box_number + rows + 1 };
-				value = get_value(bomb_indices, neighbours, num_bomb, 3);
-			}
-			else if (box_number == rows * (rows - 1) + 1) {
-				// bottom left box
-				int neighbours[3] = { box_number + 1, box_number - rows, box_number - rows + 1 };
-				value = get_value(bomb_indices, neighbours, num_bomb, 3);
-			}
-			else {
-				// remaining boxes in first column
-				int neighbours[5] = { box_number + 1, box_number - rows, box_number - rows + 1, box_number + rows, box_number + rows + 1 };
-				value = get_value(bomb_indices, neighbours, num_bomb, 5);
-			}
+		else if (box_number == grid_size) {  // top right
+			int neighbours[3] = { 0 };
+			neighbours[0] = box_number - 1;
+			neighbours[1] = box_number + grid_size;
+			neighbours[2] = box_number + grid_size - 1;
+			value = get_value(bomb_indices, neighbours, num_bomb, 3);
 		}
-
-		else if (box_number >= 2 && box_number <= rows - 1) {
-			int neighbours[5] = { box_number - 1, box_number + 1, box_number + rows - 1, box_number + rows, box_number + rows + 1 };
+		else if (box_number == grid_size * (grid_size - 1) + 1) {		// bottom left
+			int neighbours[3] = { 0 };
+			neighbours[0] = box_number - grid_size;
+			neighbours[1] = box_number - grid_size + 1;
+			neighbours[2] = box_number + 1;
+			value = get_value(bomb_indices, neighbours, num_bomb, 3);
+		}
+		else if (box_number == grid_size * grid_size) {		// bottom right
+			int neighbours[3] = { 0 };
+			neighbours[0] = box_number - 1;
+			neighbours[1] = box_number - grid_size - 1;
+			neighbours[2] = box_number - grid_size;
+			value = get_value(bomb_indices, neighbours, num_bomb, 3);
+		}
+		else if (box_number % grid_size == 1) {		// first column, except the top and bottom
+			int neighbours[5] = { 0 };
+			neighbours[0] = box_number - grid_size;
+			neighbours[1] = box_number - grid_size + 1;
+			neighbours[2] = box_number + 1;
+			neighbours[3] = box_number + grid_size;
+			neighbours[4] = box_number + grid_size + 1;
 			value = get_value(bomb_indices, neighbours, num_bomb, 5);
 		}
-		else if (box_number >= 2 + (rows * (rows - 1)) && box_number <= rows * rows - 1) {
-			int neighbours[5] = { box_number - 1, box_number + 1, box_number - rows - 1, box_number - rows, box_number - rows + 1 };
+		else if (box_number % grid_size == 0) {		// last column, except the top and bottom
+			int neighbours[5] = { 0 };
+			neighbours[0] = box_number - grid_size;
+			neighbours[1] = box_number - grid_size - 1;
+			neighbours[2] = box_number - 1;
+			neighbours[3] = box_number + grid_size;
+			neighbours[4] = box_number + grid_size - 1;
+			value = get_value(bomb_indices, neighbours, num_bomb, 5);
+		}
+		else if (box_number > 1 && box_number < grid_size) {		// first row, except first and last
+			int neighbours[5] = { 0 };
+			neighbours[0] = box_number - 1;
+			neighbours[1] = box_number + 1;
+			neighbours[2] = box_number + grid_size - 1;
+			neighbours[3] = box_number + grid_size;
+			neighbours[4] = box_number + grid_size + 1;
+			value = get_value(bomb_indices, neighbours, num_bomb, 5);
+		}
+		else if (box_number > (grid_size * (grid_size - 1) + 1) && box_number < (grid_size * grid_size)) {		// last row, except first and last
+			int neighbours[5] = { 0 };
+			neighbours[0] = box_number - grid_size;
+			neighbours[1] = box_number - grid_size + 1;
+			neighbours[2] = box_number + 1;
+			neighbours[3] = box_number + grid_size;
+			neighbours[4] = box_number + grid_size + 1;
 			value = get_value(bomb_indices, neighbours, num_bomb, 5);
 		}
 		else {
-			// box is in some of the middle columns, account for the top and bottom rows, else good
-			int neighbours[8] = { box_number - rows - 1, box_number - rows, box_number - rows - 1,
-								  box_number - 1,                           box_number + 1,
-								  box_number + rows - 1, box_number + rows, box_number + rows + 1 };
+			int neighbours[8] = { 0 };
+			neighbours[0] = box_number - grid_size - 1;
+			neighbours[1] = box_number - grid_size;
+			neighbours[2] = box_number - grid_size + 1;
+			neighbours[3] = box_number - 1;
+			neighbours[4] = box_number + 1;
+			neighbours[5] = box_number + grid_size - 1;
+			neighbours[6] = box_number + grid_size;
+			neighbours[7] = box_number + grid_size + 1;
 			value = get_value(bomb_indices, neighbours, num_bomb, 8);
 		}
 	}
@@ -491,6 +552,8 @@ int get_box_number(int bomb_indices[], int box_number, int rows, int num_bomb) {
 
 
 int* get_bomb_indices(int num_of_bombs, int grid_size) {
+	// here too, pointer to local array returned, local array will be erased from memory once function is done
+
 	std::srand(std::time(nullptr));
 
 	int* arr = (int*)malloc(num_of_bombs * sizeof(int));
