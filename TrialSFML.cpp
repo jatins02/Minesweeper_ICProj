@@ -62,6 +62,8 @@ int* get_neighbours(int box_number, int grid_size);
 void handle_grid_click(int button_clicked, int *revealed, int* box_values, int grid_size);
 void revealtile(sf::Font& font, sf::RectangleShape& tile, std::string& text, sf::RenderWindow &window);
 void handle_bomb_click(sf::RenderWindow &window, sf::Font &font, int &running);
+int check_game_won(int *revealed, int *box_values, int grid_size);
+void handle_game_won(sf::RenderWindow& window, sf::Font &font);
 
 
 // MAIN AND GAME FUNCTIONS
@@ -81,6 +83,7 @@ int main() {
 	int* revealed = nullptr;
 
 	int running = 1;
+	int gameWon = 0;
 
 	// SFML LIBRARY
 	sf::RenderWindow window = sf::RenderWindow(sf::VideoMode({ WIDTH, HEIGHT }), "minesweeper");
@@ -164,27 +167,30 @@ int main() {
 
 						// check if bomb at that box number
 						if (*(box_values + button_clicked - 1) == -1) {
-							std::cout << "bomb was clicked..." << std::endl;
 							handle_bomb_click(window, font, running);
 						}
+
 						else if (running) {
 							handle_grid_click(button_clicked, revealed, box_values, grid_size[difficulty_setting]);
+							gameWon = check_game_won(revealed, box_values, (grid_size[difficulty_setting] * grid_size[difficulty_setting]));
 						}
 						
 						// to reset the mouse clicked coordinates
 						mouse_x = -1;
 						mouse_y = -1;
 					}
+					gameWon = check_game_won(revealed, box_values, (grid_size[difficulty_setting] * grid_size[difficulty_setting]));
 				}
 			}
 		}
-	
 
+		
 		// render object
 		window.clear(sf::Color::Magenta);
 		
 		// draw objects
-		if (running) {
+		if (running && !gameWon) {
+
 			if (difficulty_setting == none) {			// when difficulty not set, draw difficulty setting buttons
 				window.draw(easyBtn);
 				window.draw(midBtn);
@@ -197,10 +203,16 @@ int main() {
 				window.draw(heading);
 			}
 
-			else {				// when difficulty is set, draw the game grid
+			else {				// when difficulty is set, draw the game grid				
 				draw_grid(window, font, difficulty_setting, box_size, grid_size, num_bombs, bomb_indices, button_clicked, revealed, box_values);
 			}
 		}
+
+		else if (gameWon){
+			draw_grid(window, font, difficulty_setting, box_size, grid_size, num_bombs, bomb_indices, button_clicked, revealed, box_values);
+			handle_game_won(window, font);
+		}
+
 		else {
 			draw_grid(window, font, difficulty_setting, box_size, grid_size, num_bombs, bomb_indices, button_clicked, revealed, box_values);
 			handle_bomb_click(window, font, running);
@@ -213,19 +225,49 @@ int main() {
 }
 
 
-void handle_grid_click(int button_clicked, int* revealed, int* box_values, int grid_size) {
+int check_game_won(int* revealed, int* box_values, int grid_size) {
+	for (int i = 0; i < grid_size; i++) {
+		if (box_values[i] != -1 && revealed[i] == 0) {
+			std::cout << "tile " << i + 1 << " is not yet revealed" << std::endl;
+			return 0;
+		}
+	}
 
-	//std::cout << "box number: " << button_clicked << " box value: " << box_values[button_clicked - 1] << std::endl;
+	return 1;
+}
+
+void handle_game_won(sf::RenderWindow& window, sf::Font& font) {
+	sf::RectangleShape win_label({ WIDTH, 150.f });
+	win_label.setOrigin(win_label.getGeometricCenter());
+	win_label.setPosition({ WIDTH / 2.0f, HEIGHT / 2.0f });
+	win_label.setFillColor(sf::Color::Blue);
+
+	sf::Text mssg(font, "YOU WIN...", 44);
+	mssg.setFillColor(sf::Color::Green);
+
+	sf::FloatRect textbounds = mssg.getLocalBounds();
+	mssg.setOrigin(textbounds.size / 2.0f);
+
+	sf::Vector2f posn = win_label.getPosition();
+	mssg.setPosition({ posn.x, posn.y });
+
+	window.draw(win_label);
+	window.draw(mssg);
+
+}
+
+void handle_grid_click(int button_clicked, int* revealed, int* box_values, int grid_size) {
 
 	if (button_clicked > (grid_size * grid_size) || button_clicked < 1) {
 		// tile outside of the boundary is clicked
 		return;
 	}
 	if (revealed[button_clicked - 1] == 1) {
+		// tile that is already revealed is clicked
 		return;
 	}
 	if (box_values[button_clicked - 1] == -1 ) {
-		// for now account for both the cases, when tile opened or is a bomb in the same case
+		// tile clicked is a bomb
 		return;			
 	}
 
@@ -250,7 +292,7 @@ void handle_grid_click(int button_clicked, int* revealed, int* box_values, int g
 
 int* get_neighbours(int box_number, int grid_size) {
 	// this function returning a local array, this is dangerous, create an array, just before the function call then get inside this function
-	// for now it works
+	// for now it kind of works...
 
 	if (box_number == 1) { // top left box
 		int neighbours[4] = { 0 };
@@ -401,7 +443,7 @@ void draw_grid(sf::RenderWindow& window, sf::Font& font, difficulties difficulty
 void handle_bomb_click(sf::RenderWindow &window, sf::Font &font, int &running) {
 	running = 0;
 	
-	sf::RectangleShape end_label;
+	sf::RectangleShape end_label({ WIDTH, 150.f});
 	end_label.setOrigin(end_label.getGeometricCenter());
 	end_label.setPosition({ WIDTH / 2.0f, HEIGHT / 2.0f });
 	end_label.setFillColor(sf::Color::Blue);
@@ -446,6 +488,7 @@ void revealtile(sf::Font &font, sf::RectangleShape &tile, std::string &text, sf:
 
 	window.draw(content);
 }
+
 
 // MISCELLANEOUS FUNCTION, (HELPERS)
 
