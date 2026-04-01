@@ -3,6 +3,7 @@
 #include <SFML/Window.hpp>
 #include <ctime>
 #include <string>  // to utilise the std::to_sting function
+#include <vector>  // used in get_neighbours function to return a vector object, and not a local pointer
 
 const unsigned int WIDTH = 560;
 const unsigned int HEIGHT = 690;
@@ -56,8 +57,8 @@ void draw_grid(sf::RenderWindow& window, sf::Font& font, difficulties difficulty
 int* get_bomb_indices(int num_of_bombs, int grid_size);
 int check_if_present(int* arr, int num, int length);
 int get_box_value(int bomb_indices[], int box_number, int rows, int num_bomb, int grid_size);
-int get_value(int bomb_indices[], int neighbours[], int num_bombs, int num_of_neighbours);
-int* get_neighbours(int box_number, int grid_size);
+int get_value(int bomb_indices[], std::vector<int> neighbours, int num_bombs, int num_of_neighbours);
+std::vector<int> get_neighbours(int box_number, int grid_size);
 
 void handle_grid_click(int button_clicked, int *revealed, int* box_values, int grid_size);
 void revealtile(sf::Font& font, sf::RectangleShape& tile, std::string& text, sf::RenderWindow &window);
@@ -280,7 +281,7 @@ void handle_grid_click(int button_clicked, int* revealed, int* box_values, int g
 		revealed[button_clicked - 1] = 1;
 
 		int neighbour_counter = 0;
-		int* neighbours = get_neighbours(button_clicked, grid_size);
+		std::vector<int> neighbours = get_neighbours(button_clicked, grid_size);
 
 		while (neighbours[neighbour_counter] != -1) {
 
@@ -290,104 +291,114 @@ void handle_grid_click(int button_clicked, int* revealed, int* box_values, int g
 	}
 }
 
-int* get_neighbours(int box_number, int grid_size) {
+std::vector<int> get_neighbours(int box_number, int grid_size) {
 	// this function returning a local array, this is dangerous, create an array, just before the function call then get inside this function
 	// for now it kind of works...
 
-	if (box_number == 1) { // top left box
-		int neighbours[4] = { 0 };
-		neighbours[0] = box_number + 1;
-		neighbours[1] = box_number + grid_size;
-		neighbours[2] = box_number + grid_size + 1;
-		neighbours[3] = -1;
+	std::vector<int> neighbours;
 
-		return neighbours;
+	if (box_number == 1) { // top left box
+		neighbours.push_back(box_number + 1);
+		neighbours.push_back(box_number + grid_size);
+		neighbours.push_back(box_number + grid_size + 1);
+		neighbours.push_back(-1);
+		//neighbours[3] = -1;
+
+		//return neighbours;
 	}
 	else if (box_number == grid_size) {  // top right
-		int neighbours[4] = { 0 };
-		neighbours[0] = box_number - 1;
-		neighbours[1] = box_number + grid_size;
-		neighbours[2] = box_number + grid_size - 1;
-		neighbours[3] = -1;
+		//int neighbours[4] = { 0 };
+		neighbours.push_back(box_number - 1);
+		neighbours.push_back(box_number + grid_size);
+		neighbours.push_back(box_number + grid_size - 1);
+		neighbours.push_back(-1);
+		//neighbours[3] = -1;
 
-		return neighbours;
+		//return neighbours;
 	}
 	else if (box_number == grid_size * (grid_size - 1) + 1) {		// bottom left
-		int neighbours[4] = { 0 };
-		neighbours[0] = box_number - grid_size;
-		neighbours[1] = box_number - grid_size + 1;
-		neighbours[2] = box_number + 1;
-		neighbours[3] = -1;
+		//int neighbours[4] = { 0 };
+		neighbours.push_back(box_number - grid_size);
+		neighbours.push_back(box_number - grid_size + 1);
+		neighbours.push_back(box_number + 1);
+		neighbours.push_back(-1);
+		//neighbours[3] = -1;
 
-		return neighbours;
+		//return neighbours;
 	}
 	else if (box_number == grid_size * grid_size) {		// bottom right
-		int neighbours[4] = { 0 };
-		neighbours[0] = box_number - 1;
-		neighbours[1] = box_number - grid_size - 1;
-		neighbours[2] = box_number - grid_size;
-		neighbours[3] = -1;
+		//int neighbours[4] = { 0 };
+		neighbours.push_back(box_number - 1);
+		neighbours.push_back(box_number - grid_size - 1);
+		neighbours.push_back(box_number - grid_size);
+		neighbours.push_back(-1);
+		//neighbours[3] = -1;
 
-		return neighbours;
+		//return neighbours;
 	}
 	else if (box_number % grid_size == 1) {		// first column, except the top and bottom
-		int neighbours[6] = { 0 };
-		neighbours[0] = box_number - grid_size;
-		neighbours[1] = box_number - grid_size + 1;
-		neighbours[2] = box_number + 1;
-		neighbours[3] = box_number + grid_size;
-		neighbours[4] = box_number + grid_size + 1;
-		neighbours[5] = -1;
+		//int neighbours[6] = { 0 };
+		neighbours.push_back(box_number - grid_size);
+		neighbours.push_back(box_number - grid_size + 1);
+		neighbours.push_back(box_number + 1);
+		neighbours.push_back(box_number + grid_size);
+		neighbours.push_back(box_number + grid_size + 1);
+		neighbours.push_back(-1);
+		//neighbours[5] = -1;
 
-		return neighbours;
+		//return neighbours;
 	}
 	else if (box_number % grid_size == 0) {		// last column, except the top and bottom
-		int neighbours[6] = { 0 };
-		neighbours[0] = box_number - grid_size;
-		neighbours[1] = box_number - grid_size - 1;
-		neighbours[2] = box_number - 1;
-		neighbours[3] = box_number + grid_size;
-		neighbours[4] = box_number + grid_size - 1;
-		neighbours[5] = -1;
+		//int neighbours[6] = { 0 };
+		neighbours.push_back(box_number - grid_size);
+		neighbours.push_back(box_number - grid_size - 1);
+		neighbours.push_back(box_number - 1);
+		neighbours.push_back(box_number + grid_size);
+		neighbours.push_back(box_number + grid_size - 1);
+		neighbours.push_back(-1);
+		//neighbours[5] = -1;
 
-		return neighbours;
+		//return neighbours;
 	}
 	else if (box_number > 1 && box_number < grid_size) {		// first row, except first and last
-		int neighbours[6] = { 0 };
-		neighbours[0] = box_number - 1;
-		neighbours[1] = box_number + 1;
-		neighbours[2] = box_number + grid_size - 1;
-		neighbours[3] = box_number + grid_size;
-		neighbours[4] = box_number + grid_size + 1;
-		neighbours[5] = -1;
+		//int neighbours[6] = { 0 };
+		neighbours.push_back(box_number - 1);
+		neighbours.push_back(box_number + 1);
+		neighbours.push_back(box_number + grid_size - 1);
+		neighbours.push_back(box_number + grid_size);
+		neighbours.push_back(box_number + grid_size + 1);
+		neighbours.push_back(-1);
+		//neighbours[5] = -1;
 
-		return neighbours;
+		//return neighbours;
 	}
 	else if (box_number > (grid_size * (grid_size - 1) + 1) && box_number < (grid_size * grid_size)) {		// last row, except first and last
-		int neighbours[6] = { 0 };
-		neighbours[0] = box_number - grid_size;
-		neighbours[1] = box_number - grid_size + 1;
-		neighbours[2] = box_number + 1;
-		neighbours[3] = box_number + grid_size;
-		neighbours[4] = box_number + grid_size + 1;
-		neighbours[5] = -1;
+		//int neighbours[6] = { 0 };
+		neighbours.push_back(box_number - grid_size);
+		neighbours.push_back(box_number - grid_size + 1);
+		neighbours.push_back(box_number + 1);
+		neighbours.push_back(box_number + grid_size);
+		neighbours.push_back(box_number + grid_size + 1);
+		neighbours.push_back(-1);
+		//neighbours[5] = -1;
 
-		return neighbours;
+		//return neighbours;
 	}
 	else {
-		int neighbours[9] = { 0 };
-		neighbours[0] = box_number - grid_size - 1;
-		neighbours[1] = box_number - grid_size;
-		neighbours[2] = box_number - grid_size + 1;
-		neighbours[3] = box_number - 1;
-		neighbours[4] = box_number + 1;
-		neighbours[5] = box_number + grid_size - 1;
-		neighbours[6] = box_number + grid_size;
-		neighbours[7] = box_number + grid_size + 1;
-		neighbours[8] = -1;
+		//int neighbours[9] = { 0 };
+		neighbours.push_back(box_number - grid_size - 1);
+		neighbours.push_back(box_number - grid_size);
+		neighbours.push_back(box_number - grid_size + 1);
+		neighbours.push_back(box_number - 1);
+		neighbours.push_back(box_number + 1);
+		neighbours.push_back(box_number + grid_size - 1);
+		neighbours.push_back(box_number + grid_size);
+		neighbours.push_back(box_number + grid_size + 1);
+		neighbours.push_back(- 1);
 
-		return neighbours;
+		//return neighbours;
 	}
+	return neighbours;
 }
 
 
@@ -492,7 +503,7 @@ void revealtile(sf::Font &font, sf::RectangleShape &tile, std::string &text, sf:
 
 // MISCELLANEOUS FUNCTION, (HELPERS)
 
-int get_value(int bomb_indices[], int neighbours[], int num_bomb, int num_of_neighbours) {
+int get_value(int bomb_indices[], std::vector<int> neighbours, int num_bomb, int num_of_neighbours) {
 	int value = 0;
 	for (int i = 0; i < num_of_neighbours; i++) {
 		if (check_if_present(bomb_indices, neighbours[i], num_bomb)) {
@@ -511,81 +522,91 @@ int get_box_value(int bomb_indices[], int box_number, int rows, int num_bomb, in
 	}
 
 	else {
+		std::vector<int> neighbours;
 
 		if (box_number == 1) { // top left box
-			int neighbours[3] = { 0 };
-			neighbours[0] = box_number + 1;
-			neighbours[1] = box_number + grid_size;
-			neighbours[2] = box_number + grid_size + 1;
+			//int neighbours[3] = { 0 };
+			//neighbours.push_back(box_number + 1);
+			//neighbours.push_back(box_number + grid_size);
+			//neighbours.push_back(box_number + grid_size + 1);
+			neighbours = get_neighbours(box_number, grid_size);
 			value = get_value(bomb_indices, neighbours, num_bomb, 3);
 		}
 		else if (box_number == grid_size) {  // top right
-			int neighbours[3] = { 0 };
-			neighbours[0] = box_number - 1;
-			neighbours[1] = box_number + grid_size;
-			neighbours[2] = box_number + grid_size - 1;
+			//int neighbours[3] = { 0 };
+			//neighbours.push_back(box_number - 1);
+			//neighbours.push_back(box_number + grid_size);
+			//neighbours.push_back(box_number + grid_size - 1);
+			neighbours = get_neighbours(box_number, grid_size);
 			value = get_value(bomb_indices, neighbours, num_bomb, 3);
 		}
 		else if (box_number == grid_size * (grid_size - 1) + 1) {		// bottom left
-			int neighbours[3] = { 0 };
-			neighbours[0] = box_number - grid_size;
-			neighbours[1] = box_number - grid_size + 1;
-			neighbours[2] = box_number + 1;
+			//int neighbours[3] = { 0 };
+			//neighbours.push_back(box_number - grid_size);
+			//neighbours.push_back(box_number - grid_size + 1);
+			//neighbours.push_back(box_number + 1);
+			neighbours = get_neighbours(box_number, grid_size);
 			value = get_value(bomb_indices, neighbours, num_bomb, 3);
 		}
 		else if (box_number == grid_size * grid_size) {		// bottom right
-			int neighbours[3] = { 0 };
-			neighbours[0] = box_number - 1;
-			neighbours[1] = box_number - grid_size - 1;
-			neighbours[2] = box_number - grid_size;
+			//int neighbours[3] = { 0 };
+			//neighbours.push_back(box_number - 1);
+			//neighbours.push_back(box_number - grid_size - 1);
+			//neighbours.push_back(box_number - grid_size);
+			neighbours = get_neighbours(box_number, grid_size);
 			value = get_value(bomb_indices, neighbours, num_bomb, 3);
 		}
 		else if (box_number % grid_size == 1) {		// first column, except the top and bottom
-			int neighbours[5] = { 0 };
-			neighbours[0] = box_number - grid_size;
-			neighbours[1] = box_number - grid_size + 1;
-			neighbours[2] = box_number + 1;
-			neighbours[3] = box_number + grid_size;
-			neighbours[4] = box_number + grid_size + 1;
+			//int neighbours[5] = { 0 };
+			//neighbours.push_back(box_number - grid_size);
+			//neighbours.push_back(box_number - grid_size + 1);
+			//neighbours.push_back(box_number + 1);
+			//neighbours.push_back(box_number + grid_size);
+			//neighbours.push_back(box_number + grid_size + 1);
+			neighbours = get_neighbours(box_number, grid_size);
 			value = get_value(bomb_indices, neighbours, num_bomb, 5);
 		}
 		else if (box_number % grid_size == 0) {		// last column, except the top and bottom
-			int neighbours[5] = { 0 };
-			neighbours[0] = box_number - grid_size;
-			neighbours[1] = box_number - grid_size - 1;
-			neighbours[2] = box_number - 1;
-			neighbours[3] = box_number + grid_size;
-			neighbours[4] = box_number + grid_size - 1;
+			//int neighbours[5] = { 0 };
+			//neighbours.push_back(box_number - grid_size);
+			//neighbours.push_back(box_number - grid_size - 1);
+			//neighbours.push_back(box_number - 1);
+			//neighbours.push_back(box_number + grid_size);
+			//neighbours.push_back(box_number + grid_size - 1);
+			neighbours = get_neighbours(box_number, grid_size);
 			value = get_value(bomb_indices, neighbours, num_bomb, 5);
 		}
 		else if (box_number > 1 && box_number < grid_size) {		// first row, except first and last
-			int neighbours[5] = { 0 };
-			neighbours[0] = box_number - 1;
-			neighbours[1] = box_number + 1;
-			neighbours[2] = box_number + grid_size - 1;
-			neighbours[3] = box_number + grid_size;
-			neighbours[4] = box_number + grid_size + 1;
+			//int neighbours[5] = { 0 };
+			//neighbours.push_back(box_number - 1);
+			//neighbours.push_back(box_number + 1);
+			//neighbours.push_back(box_number + grid_size - 1);
+			//neighbours.push_back(box_number + grid_size);
+			//neighbours.push_back(box_number + grid_size + 1);
+			neighbours = get_neighbours(box_number, grid_size);
 			value = get_value(bomb_indices, neighbours, num_bomb, 5);
 		}
 		else if (box_number > (grid_size * (grid_size - 1) + 1) && box_number < (grid_size * grid_size)) {		// last row, except first and last
-			int neighbours[5] = { 0 };
-			neighbours[0] = box_number - grid_size;
-			neighbours[1] = box_number - grid_size + 1;
-			neighbours[2] = box_number + 1;
-			neighbours[3] = box_number + grid_size;
-			neighbours[4] = box_number + grid_size + 1;
+			//int neighbours[5] = { 0 };
+			//neighbours.push_back(box_number - grid_size);
+			//neighbours.push_back(box_number - grid_size + 1);
+			//neighbours.push_back(box_number + 1);
+			//neighbours.push_back(box_number + grid_size);
+			//neighbours.push_back(box_number + grid_size + 1);
+			neighbours = get_neighbours(box_number, grid_size);
 			value = get_value(bomb_indices, neighbours, num_bomb, 5);
 		}
 		else {
-			int neighbours[8] = { 0 };
-			neighbours[0] = box_number - grid_size - 1;
-			neighbours[1] = box_number - grid_size;
-			neighbours[2] = box_number - grid_size + 1;
-			neighbours[3] = box_number - 1;
-			neighbours[4] = box_number + 1;
-			neighbours[5] = box_number + grid_size - 1;
-			neighbours[6] = box_number + grid_size;
-			neighbours[7] = box_number + grid_size + 1;
+			//int neighbours[8] = { 0 };
+			//neighbours.push_back(box_number - grid_size - 1);
+			//neighbours.push_back(box_number - grid_size);
+			//neighbours.push_back(box_number - grid_size + 1);
+			//neighbours.push_back(box_number - 1);
+			//neighbours.push_back(box_number + 1);
+			//neighbours.push_back(box_number + grid_size - 1);
+			//neighbours.push_back(box_number + grid_size);
+			//neighbours.push_back(box_number + grid_size + 1);
+			neighbours = get_neighbours(box_number, grid_size);
 			value = get_value(bomb_indices, neighbours, num_bomb, 8);
 		}
 	}
