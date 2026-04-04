@@ -1,6 +1,7 @@
 #include <iostream>
 #include <SFML/Graphics.hpp>
 #include <SFML/Window.hpp>
+#include <SFML/System.hpp> // to utilise the clock
 #include <ctime>
 #include <string>  // to utilise the std::to_sting function
 #include <vector>  // used in get_neighbours function to return a vector object, and not a local pointer
@@ -27,14 +28,14 @@ public:
 
 
 	DifficultyBtn(std::string text, sf::Font &font, float yPos)			// get an error saying, no default constructor for the sf::Text class, this is because, you have to pass in the font to the text class as soon as the constructor is called.
-		: content(font, text, 22){										// you can pass in the text string as well as the size of characters while initialising sf::Text
+		: content(font, text, 28){										// you can pass in the text string as well as the size of characters while initialising sf::Text
 
 		this->setSize(sf::Vector2f(BTN_WIDTH, BTN_HEIGHT));
 		this->setOrigin(this->getGeometricCenter());
-		this->setFillColor(sf::Color(0xFFF0F5));
+		this->setFillColor(sf::Color(88, 82, 97));
 		this->setPosition({ WIDTH / 2.0f, yPos });
 
-		content.setFillColor(sf::Color::Black);
+		content.setFillColor(sf::Color(229, 223, 240));
 
 		sf::FloatRect textbounds = content.getLocalBounds();
 		content.setOrigin(textbounds.size / 2.0f);
@@ -50,7 +51,6 @@ typedef enum { easy, mid, hard, none } difficulties;
 // FUNCTION PROTOTYPES
 
 void setting_btn_clicked(int x, int y, DifficultyBtn &easy, DifficultyBtn &mid, DifficultyBtn &hard, difficulties &difficulty_setting);
-
 void draw_grid(sf::RenderWindow& window, sf::Font& font, difficulties difficulty_setting,
 				int box_size[], int grid_size[], int num_bombs[], int bomb_indices[], int button_clicked, int* revealed, int box_values[]);
 
@@ -59,12 +59,12 @@ int check_if_present(int* arr, int num, int length);
 int get_box_value(int bomb_indices[], int box_number, int rows, int num_bomb, int grid_size);
 int get_value(int bomb_indices[], std::vector<int> neighbours, int num_bombs, int num_of_neighbours);
 std::vector<int> get_neighbours(int box_number, int grid_size);
-
 void handle_grid_click(int button_clicked, int *revealed, int* box_values, int grid_size);
 void revealtile(sf::Font& font, sf::RectangleShape& tile, std::string& text, sf::RenderWindow &window);
 void handle_bomb_click(sf::RenderWindow &window, sf::Font &font, int &running);
 int check_game_won(int *revealed, int *box_values, int grid_size);
 void handle_game_won(sf::RenderWindow& window, sf::Font &font);
+void display_time(sf::RenderWindow& window, sf::Font& font, int sec);
 
 
 // MAIN AND GAME FUNCTIONS
@@ -86,6 +86,11 @@ int main() {
 	int running = 1;
 	int gameWon = 0;
 
+	sf::Clock clock;
+	int clockrunning = 0;
+	int finaltime = 0;
+
+
 	// SFML LIBRARY
 	sf::RenderWindow window = sf::RenderWindow(sf::VideoMode({ WIDTH, HEIGHT }), "minesweeper");
 	window.setFramerateLimit(69);
@@ -96,12 +101,13 @@ int main() {
 	}
 
 	sf::Text heading(font, "MINESWEEPER", 44);
+	heading.setFillColor(sf::Color(222, 222, 222));
 	heading.setPosition({ WIDTH / 2.0f - (44*11/2), 100});
 
 	difficulties difficulty_setting = none;
 
 
-	// INSTANTIATE THE BUTTONS
+	// INSTANTIATE THE DIFFICULTY SETTING BUTTONS
 	DifficultyBtn hardBtn("HARD", font, 600.0f);
 	DifficultyBtn midBtn("MID", font, 450.0f);
 	DifficultyBtn easyBtn("EASY", font, 300.0f);
@@ -130,23 +136,29 @@ int main() {
 
 						if (difficulty_setting != none) {		// difficulty not set yet
 							int total_tiles = grid_size[difficulty_setting] * grid_size[difficulty_setting];
-							bomb_indices = get_bomb_indices(num_bombs[difficulty_setting], grid_size[difficulty_setting]);
+							int grid_length = grid_size[difficulty_setting];
+							bomb_indices = get_bomb_indices(num_bombs[difficulty_setting], grid_length);
 							
 							revealed = new int[total_tiles]();
 
-							box_values = (int*)malloc((grid_size[difficulty_setting] * grid_size[difficulty_setting]) * sizeof(int));
+							box_values = (int*)malloc((total_tiles) * sizeof(int));
 
-							for (int i = 1; i <= grid_size[difficulty_setting]; i++) {
-								for (int j = 1; j <= grid_size[difficulty_setting]; j++) {
-									int box_number = (i - 1) * grid_size[difficulty_setting] + j;
+							for (int i = 1; i <= grid_length; i++) {
+								for (int j = 1; j <= grid_length; j++) {
+									int box_number = (i - 1) * grid_length + j;
 									if (box_values != nullptr) {
-										box_values[box_number - 1] = get_box_value(bomb_indices, box_number, grid_size[difficulty_setting], num_bombs[difficulty_setting], grid_size[difficulty_setting]);
+										box_values[box_number - 1] = get_box_value(bomb_indices, box_number, grid_length, num_bombs[difficulty_setting], grid_size[difficulty_setting]);
 									}
 									else {
 										std::cout << "Error in inserting values to boxes..." << std::endl;
 									}
 								}
 							}
+
+							// start the clock
+							clock.restart();
+							clockrunning = 1;
+							
 						}
 					}
 
@@ -187,7 +199,7 @@ int main() {
 
 		
 		// render object
-		window.clear(sf::Color::Magenta);
+		window.clear(sf::Color(10, 2, 22));
 		
 		// draw objects
 		if (running && !gameWon) {
@@ -205,31 +217,72 @@ int main() {
 			}
 
 			else {				// when difficulty is set, draw the game grid				
+				
 				draw_grid(window, font, difficulty_setting, box_size, grid_size, num_bombs, bomb_indices, button_clicked, revealed, box_values);
 			}
 		}
 
 		else if (gameWon){
+			// only update finaltime once, then set clockrunning to zero, so that finaltime is not updated further
+			if (clockrunning) {
+				finaltime = clock.getElapsedTime().asSeconds();
+				clockrunning = 0;
+			}
 			draw_grid(window, font, difficulty_setting, box_size, grid_size, num_bombs, bomb_indices, button_clicked, revealed, box_values);
 			handle_game_won(window, font);
 		}
 
 		else {
+			if (clockrunning) {
+				finaltime = clock.getElapsedTime().asSeconds();
+				clockrunning = 0;
+			}
 			draw_grid(window, font, difficulty_setting, box_size, grid_size, num_bombs, bomb_indices, button_clicked, revealed, box_values);
 			handle_bomb_click(window, font, running);
 		}
+		
+		if (clockrunning) {
+			//sf::Time elapsed = clock.getElapsedTime();
+			//int sec = elapsed.asSeconds();
 			
+			display_time(window, font, clock.getElapsedTime().asSeconds());
+		}
+		else if (difficulty_setting != none && !clockrunning) {
+			display_time(window, font, finaltime);
+		}
+		
 		window.display();
 	}
 
+	free(bomb_indices);		// because get_bomb_indices is using malloc, so memory allocated in heap. Free up that memory once the game is done to prevent memory leak.
 	return 0;
 }
 
+void display_time(sf::RenderWindow& window, sf::Font &font, int sec) {
+	sf::RectangleShape timerlabel({ WIDTH - 200, 88 });
+	timerlabel.setOrigin(timerlabel.getGeometricCenter());
+	timerlabel.setPosition({ WIDTH / 2.f, 65 });
+	timerlabel.setFillColor(sf::Color::Blue);
+
+	int seconds = sec % 60;
+	int minutes = sec / 60;
+
+	std::string ftime = std::format("{:02}:{:02}", minutes, seconds);
+	sf::Text text(font, ftime, 28);
+	text.setFillColor(sf::Color::White);
+	sf::FloatRect textbounds = text.getLocalBounds();
+	text.setOrigin(textbounds.size / 2.0f);
+
+	sf::Vector2f posn = timerlabel.getPosition();
+	text.setPosition({posn.x, posn.y});
+	
+	window.draw(timerlabel);
+	window.draw(text);
+}
 
 int check_game_won(int* revealed, int* box_values, int grid_size) {
 	for (int i = 0; i < grid_size; i++) {
 		if (box_values[i] != -1 && revealed[i] == 0) {
-			std::cout << "tile " << i + 1 << " is not yet revealed" << std::endl;
 			return 0;
 		}
 	}
@@ -292,100 +345,74 @@ void handle_grid_click(int button_clicked, int* revealed, int* box_values, int g
 }
 
 std::vector<int> get_neighbours(int box_number, int grid_size) {
-	// this function returning a local array, this is dangerous, create an array, just before the function call then get inside this function
-	// for now it kind of works...
 
 	std::vector<int> neighbours;
 
-	if (box_number == 1) { // top left box
+	if (box_number == 1) {							// top left box
 		neighbours.push_back(box_number + 1);
 		neighbours.push_back(box_number + grid_size);
 		neighbours.push_back(box_number + grid_size + 1);
 		neighbours.push_back(-1);
-		//neighbours[3] = -1;
-
-		//return neighbours;
 	}
-	else if (box_number == grid_size) {  // top right
-		//int neighbours[4] = { 0 };
+
+	else if (box_number == grid_size) {				// top right
 		neighbours.push_back(box_number - 1);
 		neighbours.push_back(box_number + grid_size);
 		neighbours.push_back(box_number + grid_size - 1);
 		neighbours.push_back(-1);
-		//neighbours[3] = -1;
-
-		//return neighbours;
 	}
+
 	else if (box_number == grid_size * (grid_size - 1) + 1) {		// bottom left
-		//int neighbours[4] = { 0 };
 		neighbours.push_back(box_number - grid_size);
 		neighbours.push_back(box_number - grid_size + 1);
 		neighbours.push_back(box_number + 1);
 		neighbours.push_back(-1);
-		//neighbours[3] = -1;
-
-		//return neighbours;
 	}
-	else if (box_number == grid_size * grid_size) {		// bottom right
-		//int neighbours[4] = { 0 };
+
+	else if (box_number == grid_size * grid_size) {					// bottom right
 		neighbours.push_back(box_number - 1);
 		neighbours.push_back(box_number - grid_size - 1);
 		neighbours.push_back(box_number - grid_size);
 		neighbours.push_back(-1);
-		//neighbours[3] = -1;
-
-		//return neighbours;
 	}
-	else if (box_number % grid_size == 1) {		// first column, except the top and bottom
-		//int neighbours[6] = { 0 };
+
+	else if (box_number % grid_size == 1) {							// first column, except the top and bottom
 		neighbours.push_back(box_number - grid_size);
 		neighbours.push_back(box_number - grid_size + 1);
 		neighbours.push_back(box_number + 1);
 		neighbours.push_back(box_number + grid_size);
 		neighbours.push_back(box_number + grid_size + 1);
 		neighbours.push_back(-1);
-		//neighbours[5] = -1;
-
-		//return neighbours;
 	}
-	else if (box_number % grid_size == 0) {		// last column, except the top and bottom
-		//int neighbours[6] = { 0 };
+
+	else if (box_number % grid_size == 0) {							// last column, except the top and bottom
 		neighbours.push_back(box_number - grid_size);
 		neighbours.push_back(box_number - grid_size - 1);
 		neighbours.push_back(box_number - 1);
 		neighbours.push_back(box_number + grid_size);
 		neighbours.push_back(box_number + grid_size - 1);
 		neighbours.push_back(-1);
-		//neighbours[5] = -1;
-
-		//return neighbours;
 	}
-	else if (box_number > 1 && box_number < grid_size) {		// first row, except first and last
-		//int neighbours[6] = { 0 };
+
+	else if (box_number > 1 && box_number < grid_size) {			// first row, except first and last
 		neighbours.push_back(box_number - 1);
 		neighbours.push_back(box_number + 1);
 		neighbours.push_back(box_number + grid_size - 1);
 		neighbours.push_back(box_number + grid_size);
 		neighbours.push_back(box_number + grid_size + 1);
 		neighbours.push_back(-1);
-		//neighbours[5] = -1;
-
-		//return neighbours;
 	}
+
 	else if (box_number > (grid_size * (grid_size - 1) + 1) && box_number < (grid_size * grid_size)) {		// last row, except first and last
-		//int neighbours[6] = { 0 };
 		neighbours.push_back(box_number - grid_size);
 		neighbours.push_back(box_number - grid_size + 1);
 		neighbours.push_back(box_number + 1);
 		neighbours.push_back(box_number + grid_size);
 		neighbours.push_back(box_number + grid_size + 1);
 		neighbours.push_back(-1);
-		//neighbours[5] = -1;
-
-		//return neighbours;
 	}
+
 	else {
-		//int neighbours[9] = { 0 };
 		neighbours.push_back(box_number - grid_size - 1);
 		neighbours.push_back(box_number - grid_size);
 		neighbours.push_back(box_number - grid_size + 1);
@@ -395,8 +422,6 @@ std::vector<int> get_neighbours(int box_number, int grid_size) {
 		neighbours.push_back(box_number + grid_size);
 		neighbours.push_back(box_number + grid_size + 1);
 		neighbours.push_back(- 1);
-
-		//return neighbours;
 	}
 	return neighbours;
 }
@@ -437,6 +462,7 @@ void draw_grid(sf::RenderWindow& window, sf::Font& font, difficulties difficulty
 
 			rect.setPosition({ (float)box_size[difficulty_setting] * (j - 1) + padding[difficulty_setting] * j + offset_x[difficulty_setting],
 							   (float)box_size[difficulty_setting] * (i - 1) + padding[difficulty_setting] * i + offset_y[difficulty_setting] });
+			rect.setFillColor(sf::Color(54, 33, 97));
 
 			if (revealed[box_number - 1]) {
 				// if the tile is revealed, draw the rect before the number
@@ -469,7 +495,7 @@ void handle_bomb_click(sf::RenderWindow &window, sf::Font &font, int &running) {
 
 	mssg.setPosition({ posn.x , posn.y });
 
-	window.draw(end_label);		// not working rn
+	window.draw(end_label);
 	window.draw(mssg);
 }
 
@@ -480,12 +506,16 @@ void handle_bomb_click(sf::RenderWindow &window, sf::Font &font, int &running) {
 
 void revealtile(sf::Font &font, sf::RectangleShape &tile, std::string &text, sf::RenderWindow &window) {
 
-	tile.setFillColor(sf::Color::Black);
-	window.draw(tile);
 
 	if (text == "0") {
+		tile.setFillColor(sf::Color(170, 159, 191));
+		window.draw(tile);
 		return;
 	}
+
+	tile.setFillColor(sf::Color(100, 84, 133));
+	window.draw(tile);
+	
 
 	sf::Text content(font, text, 22);
 
@@ -524,88 +554,39 @@ int get_box_value(int bomb_indices[], int box_number, int rows, int num_bomb, in
 	else {
 		std::vector<int> neighbours;
 
-		if (box_number == 1) { // top left box
-			//int neighbours[3] = { 0 };
-			//neighbours.push_back(box_number + 1);
-			//neighbours.push_back(box_number + grid_size);
-			//neighbours.push_back(box_number + grid_size + 1);
+		if (box_number == 1) {						// top left box
 			neighbours = get_neighbours(box_number, grid_size);
 			value = get_value(bomb_indices, neighbours, num_bomb, 3);
 		}
-		else if (box_number == grid_size) {  // top right
-			//int neighbours[3] = { 0 };
-			//neighbours.push_back(box_number - 1);
-			//neighbours.push_back(box_number + grid_size);
-			//neighbours.push_back(box_number + grid_size - 1);
+		else if (box_number == grid_size) {			// top right
 			neighbours = get_neighbours(box_number, grid_size);
 			value = get_value(bomb_indices, neighbours, num_bomb, 3);
 		}
 		else if (box_number == grid_size * (grid_size - 1) + 1) {		// bottom left
-			//int neighbours[3] = { 0 };
-			//neighbours.push_back(box_number - grid_size);
-			//neighbours.push_back(box_number - grid_size + 1);
-			//neighbours.push_back(box_number + 1);
 			neighbours = get_neighbours(box_number, grid_size);
 			value = get_value(bomb_indices, neighbours, num_bomb, 3);
 		}
 		else if (box_number == grid_size * grid_size) {		// bottom right
-			//int neighbours[3] = { 0 };
-			//neighbours.push_back(box_number - 1);
-			//neighbours.push_back(box_number - grid_size - 1);
-			//neighbours.push_back(box_number - grid_size);
 			neighbours = get_neighbours(box_number, grid_size);
 			value = get_value(bomb_indices, neighbours, num_bomb, 3);
 		}
 		else if (box_number % grid_size == 1) {		// first column, except the top and bottom
-			//int neighbours[5] = { 0 };
-			//neighbours.push_back(box_number - grid_size);
-			//neighbours.push_back(box_number - grid_size + 1);
-			//neighbours.push_back(box_number + 1);
-			//neighbours.push_back(box_number + grid_size);
-			//neighbours.push_back(box_number + grid_size + 1);
 			neighbours = get_neighbours(box_number, grid_size);
 			value = get_value(bomb_indices, neighbours, num_bomb, 5);
 		}
 		else if (box_number % grid_size == 0) {		// last column, except the top and bottom
-			//int neighbours[5] = { 0 };
-			//neighbours.push_back(box_number - grid_size);
-			//neighbours.push_back(box_number - grid_size - 1);
-			//neighbours.push_back(box_number - 1);
-			//neighbours.push_back(box_number + grid_size);
-			//neighbours.push_back(box_number + grid_size - 1);
 			neighbours = get_neighbours(box_number, grid_size);
 			value = get_value(bomb_indices, neighbours, num_bomb, 5);
 		}
 		else if (box_number > 1 && box_number < grid_size) {		// first row, except first and last
-			//int neighbours[5] = { 0 };
-			//neighbours.push_back(box_number - 1);
-			//neighbours.push_back(box_number + 1);
-			//neighbours.push_back(box_number + grid_size - 1);
-			//neighbours.push_back(box_number + grid_size);
-			//neighbours.push_back(box_number + grid_size + 1);
 			neighbours = get_neighbours(box_number, grid_size);
 			value = get_value(bomb_indices, neighbours, num_bomb, 5);
 		}
 		else if (box_number > (grid_size * (grid_size - 1) + 1) && box_number < (grid_size * grid_size)) {		// last row, except first and last
-			//int neighbours[5] = { 0 };
-			//neighbours.push_back(box_number - grid_size);
-			//neighbours.push_back(box_number - grid_size + 1);
-			//neighbours.push_back(box_number + 1);
-			//neighbours.push_back(box_number + grid_size);
-			//neighbours.push_back(box_number + grid_size + 1);
 			neighbours = get_neighbours(box_number, grid_size);
 			value = get_value(bomb_indices, neighbours, num_bomb, 5);
 		}
 		else {
-			//int neighbours[8] = { 0 };
-			//neighbours.push_back(box_number - grid_size - 1);
-			//neighbours.push_back(box_number - grid_size);
-			//neighbours.push_back(box_number - grid_size + 1);
-			//neighbours.push_back(box_number - 1);
-			//neighbours.push_back(box_number + 1);
-			//neighbours.push_back(box_number + grid_size - 1);
-			//neighbours.push_back(box_number + grid_size);
-			//neighbours.push_back(box_number + grid_size + 1);
 			neighbours = get_neighbours(box_number, grid_size);
 			value = get_value(bomb_indices, neighbours, num_bomb, 8);
 		}
@@ -616,7 +597,8 @@ int get_box_value(int bomb_indices[], int box_number, int rows, int num_bomb, in
 
 
 int* get_bomb_indices(int num_of_bombs, int grid_size) {
-	// here too, pointer to local array returned, local array will be erased from memory once function is done
+	// pointer to local array returned, local array will be erased from memory once function is done
+	// if making arr, into std::vector<int> then looping problem at other function
 
 	std::srand(std::time(nullptr));
 
